@@ -11,7 +11,7 @@ class WPMDBPro_Multisite_Tools extends WPMDBPro_Addon {
 		parent::__construct( $plugin_file_path );
 		$this->plugin_slug    = 'wp-migrate-db-pro-multisite-tools';
 		$this->plugin_version = $GLOBALS['wpmdb_meta']['wp-migrate-db-pro-multisite-tools']['version'];
-		if ( ! $this->meets_version_requirements( '1.5.4' ) ) {
+		if ( ! $this->meets_version_requirements( '1.6.1' ) ) {
 			return;
 		}
 
@@ -21,6 +21,7 @@ class WPMDBPro_Multisite_Tools extends WPMDBPro_Addon {
 			'mst_select_subsite',
 			'mst_selected_subsite',
 			'new_prefix',
+			'keep_active_plugins',
 		);
 
 		add_action( 'wpmdb_before_migration_options', array( $this, 'migration_form_controls' ) );
@@ -261,11 +262,13 @@ class WPMDBPro_Multisite_Tools extends WPMDBPro_Addon {
 	public function load_assets() {
 		$plugins_url = trailingslashit( plugins_url() ) . trailingslashit( $this->plugin_folder_name );
 		$version     = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? time() : $this->plugin_version;
+		$ver_string  = '-' . str_replace( '.', '', $this->plugin_version );
+		$min         = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '.min';
 
-		$src = $plugins_url . 'asset/css/styles.css';
+		$src = $plugins_url . 'asset/dist/css/styles.css';
 		wp_enqueue_style( 'wp-migrate-db-pro-multisite-tools-styles', $src, array( 'wp-migrate-db-pro-styles' ), $version );
 
-		$src = $plugins_url . 'asset/js/script.js';
+		$src = $plugins_url . "asset/dist/js/script{$ver_string}{$min}.js";
 		wp_enqueue_script( 'wp-migrate-db-pro-multisite-tools-script',
 			$src,
 			array(
@@ -713,19 +716,18 @@ class WPMDBPro_Multisite_Tools extends WPMDBPro_Addon {
 		}
 
 		if ( is_multisite() && 'pull' === $intent &&
-		     $this->state_data['site_details']['local']['is_multisite'] !== $this->state_data['site_details']['remote']['is_multisite'] &&
-		     ! empty( $this->state_data['site_details']['local']['subsites_info'][ $blog_id ]['uploads']['short_basedir'] )
+		     $this->state_data['site_details']['local']['is_multisite'] !== $this->state_data['site_details']['remote']['is_multisite']
 		) {
 			$remote_attachments = unserialize( stripslashes( $response['remote_attachments'] ) );
 
 			if ( ! empty( $remote_attachments[1] ) ) {
 				foreach ( $remote_attachments[1] as $index => $attachment ) {
 					$attachment['blog_id'] = $blog_id;
-					$attachment['file']    = trailingslashit( $this->state_data['site_details']['local']['subsites_info'][ $blog_id ]['uploads']['short_basedir'] ) . $attachment['file'];
+					$attachment['file']    = ltrim( trailingslashit( $this->state_data['site_details']['local']['subsites_info'][ $blog_id ]['uploads']['short_basedir'] ) . $attachment['file'], '/' );
 
 					if ( ! empty( $attachment['sizes'] ) ) {
 						foreach ( $attachment['sizes'] as $size_idx => $size ) {
-							$attachment['sizes'][ $size_idx ]['file'] = trailingslashit( $this->state_data['site_details']['local']['subsites_info'][ $blog_id ]['uploads']['short_basedir'] ) . $size['file'];
+							$attachment['sizes'][ $size_idx ]['file'] = ltrim( trailingslashit( $this->state_data['site_details']['local']['subsites_info'][ $blog_id ]['uploads']['short_basedir'] ) . $size['file'], '/' );
 						}
 					}
 
@@ -848,7 +850,7 @@ class WPMDBPro_Multisite_Tools extends WPMDBPro_Addon {
 	}
 
 	/**
-	 * Maybe change options data to be preserved by stripping out other plugins from active_plugins if we're not preserving them.
+	 * Maybe preserve the WPMDB plugins if they aren't already preserved.
 	 *
 	 * @param array  $preserved_options_data
 	 * @param string $intent
@@ -868,16 +870,28 @@ class WPMDBPro_Multisite_Tools extends WPMDBPro_Addon {
 			foreach ( $preserved_options_data as $table => $data ) {
 				foreach ( $data as $key => $option ) {
 					if ( 'active_plugins' === $option['option_name'] ) {
-						$option_value = unserialize( $option['option_value'] );
+						global $wpdb;
 
-						$plugins = array();
-						foreach ( $option_value as $plugin_key => $plugin ) {
-							if ( 0 === strpos( $plugin, 'wp-migrate-db' ) ) {
-								$plugins[] = $plugin;
+						$table_name       = esc_sql( $table );
+						$option_value     = unserialize( $option['option_value'] );
+						$migrated_plugins = array();
+						$wpmdb_plugins    = array();
+
+						if ( $result = $wpdb->get_var( "SELECT option_value FROM $table_name WHERE option_name = 'active_plugins'" )  ) {
+							$unserialized = unserialize( $result );
+							if ( is_array( $unserialized ) ) {
+								$migrated_plugins = $unserialized;
 							}
 						}
 
-						$option['option_value']                   = serialize( $plugins );
+						foreach ( $option_value as $plugin_key => $plugin ) {
+							if ( 0 === strpos( $plugin, 'wp-migrate-db' ) ) {
+								$wpmdb_plugins[] = $plugin;
+							}
+						}
+
+						$merged_plugins                           = array_unique( array_merge( $wpmdb_plugins, $migrated_plugins ) );
+						$option['option_value']                   = serialize( $merged_plugins );
 						$preserved_options_data[ $table ][ $key ] = $option;
 						break;
 					}

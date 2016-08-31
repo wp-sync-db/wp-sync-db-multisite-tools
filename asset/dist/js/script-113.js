@@ -215,6 +215,20 @@ wpmdb.mst = {
 		subsite_for_tables = selected_subsite;
 	}
 
+	function select_subsite_tables_on_change_action( data ) {
+		if ( undefined !== wpmdb.mst.remote_connection_data &&
+			'true' !== wpmdb.mst.remote_connection_data.site_details.is_multisite &&
+			doing_mst_select_subsite() &&
+			data.last_migration_type !== data.migration_type
+		) {
+
+			// Timeout required otherwise wpmdb_update_push/pull_table_select action runs after this
+			setTimeout( function() {
+				$.wpmdb.do_action( 'wpmdb_select_all_tables' );
+			} );
+		}
+	}
+
 	function maybe_update_local_url_for_subsite( selected_subsite ) {
 		var new_local_url = original_local_url;
 
@@ -279,27 +293,30 @@ wpmdb.mst = {
 				return true;
 			}
 
+			if ( 1 === wpmdb.subsite_for_table( table_prefix, table_name ) ) {
+
+				// wp_users and wp_usermeta are relevant to all sites, shortcut out.
+				if ( wpmdb.table_is( table_prefix, 'users', table_name ) || wpmdb.table_is( table_prefix, 'usermeta', table_name ) ) {
+					return exclude;
+				}
+
+				// Following tables are Multisite setup tables and can be excluded from migration.
+				// We'll handle getting any data we need from these tables elsewhere.
+				var ms_tables = [ 'blog_versions', 'blogs', 'registration_log', 'signups', 'site', 'sitemeta' ];
+
+				$.each( ms_tables, function( index, ms_table ) {
+					if ( wpmdb.table_is( table_prefix, ms_table, table_name ) ) {
+						exclude = true;
+					}
+				} );
+			}
+
 			// If pulling from a single site install, all properly prefixed tables are relevant.
 			if ( 'pull' === wpmdb_migration_type() &&
 				'undefined' !== typeof wpmdb.mst.remote_connection_data &&
 				'true' !== wpmdb.mst.remote_connection_data.site_details.is_multisite ) {
 				return exclude;
 			}
-
-			// wp_users and wp_usermeta are relevant to all sites, shortcut out.
-			if ( wpmdb.table_is( table_prefix, 'users', table_name ) || wpmdb.table_is( table_prefix, 'usermeta', table_name ) ) {
-				return exclude;
-			}
-
-			// Following tables are Multisite setup tables and can be excluded from migration.
-			// We'll handle getting any data we need from these tables elsewhere.
-			var ms_tables = [ 'blog_versions', 'blogs', 'registration_log', 'signups', 'site', 'sitemeta' ];
-
-			$.each( ms_tables, function( index, ms_table ) {
-				if ( wpmdb.table_is( table_prefix, ms_table, table_name ) ) {
-					exclude = true;
-				}
-			} );
 
 			if ( false === is_subsite_table( table_prefix, table_name ) ) {
 				exclude = true;
@@ -413,6 +430,7 @@ wpmdb.mst = {
 	$.wpmdb.add_action( 'wpmdbmst_selected_subsite_changed', update_table_selects );
 	$.wpmdb.add_action( 'wpmdbmst_selected_subsite_changed', maybe_update_local_url_for_subsite );
 	$.wpmdb.add_action( 'wpmdbmst_selected_subsite_changed', hide_show_new_prefix_field );
+	$.wpmdb.add_action( 'move_connection_info_box', select_subsite_tables_on_change_action );
 
 	$.wpmdb.add_action( 'wpmdb_connection_data_updated', update_remote_connection_data );
 

@@ -1,6 +1,6 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the wp-migrate-db-pro-multisite-tools package.
+# This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wp-migrate-db-pro-multisite-tools\n"
 "Report-Msgid-Bugs-To: nom@deliciousbrains.com\n"
-"POT-Creation-Date: 2016-02-17 12:56+0000\n"
+"POT-Creation-Date: 2016-07-11 18:30-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -38,32 +38,32 @@ msgstr ""
 msgid "A valid prefix must be supplied to make use of the prefix option"
 msgstr ""
 
-#: class/wpmdbpro-multisite-tools.php:233
+#: class/wpmdbpro-multisite-tools.php:234
 msgid "Migration failed"
 msgstr ""
 
-#: class/wpmdbpro-multisite-tools.php:234
+#: class/wpmdbpro-multisite-tools.php:235
 msgid "Please select a subsite."
 msgstr ""
 
-#: class/wpmdbpro-multisite-tools.php:235
+#: class/wpmdbpro-multisite-tools.php:236
 msgid "Please enter a new table prefix."
 msgstr ""
 
-#: class/wpmdbpro-multisite-tools.php:236
+#: class/wpmdbpro-multisite-tools.php:237
 msgid ""
 "Please only enter letters, numbers or underscores for the new table prefix."
 msgstr ""
 
-#: class/wpmdbpro-multisite-tools.php:237
+#: class/wpmdbpro-multisite-tools.php:238
 msgid "Export a subsite as a single site install"
 msgstr ""
 
-#: class/wpmdbpro-multisite-tools.php:238
+#: class/wpmdbpro-multisite-tools.php:239
 msgid "Pull into a specific subsite"
 msgstr ""
 
-#: class/wpmdbpro-multisite-tools.php:239
+#: class/wpmdbpro-multisite-tools.php:240
 msgid "Push a specific subsite"
 msgstr ""
 
